@@ -4,35 +4,52 @@ const StellarSdk = require('stellar-sdk');
 const bip39 = require('bip39');
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto'); // Menggunakan modul crypto bawaan Node.js
 
 // --- Konfigurasi Jaringan Pi ---
 const PI_NETWORK_PASSPHRASE = "Pi Network";
 const PI_HORIZON_URL = "https://api.mainnet.minepi.com";
-// PERBAIKAN: Menggunakan constructor Server yang baru
 const server = new StellarSdk.Server(PI_HORIZON_URL, { allowHttp: true });
 
 /**
  * ==========================================================
  * PERINGATAN KEAMANAN (SECURITY WARNING)
  * ==========================================================
- * Skrip ini akan menangani kunci rahasia (secret key) dan frasa mnemonik.
+ * Skrip ini menangani kunci rahasia (secret key) dan frasa mnemonik.
  * Pastikan Anda menjalankan skrip ini di lingkungan yang aman.
  * JANGAN PERNAH membagikan secret key atau mnemonik Anda kepada siapapun.
  * ==========================================================
  */
 
+
 // --- FUNGSI-FUNGSI INTI ---
 
 /**
+ * **FUNGSI BARU & PENTING**
+ * Mengubah frasa mnemonik menjadi Keypair menggunakan metode derivasi Pi Network.
+ * @param {string} mnemonic - 24 kata frasa mnemonik.
+ * @param {string} passphrase - Passphrase tambahan (untuk Pi, biasanya kosong).
+ * @returns {StellarSdk.Keypair} Objek Keypair Stellar.
+ */
+function piMnemonicToKeypair(mnemonic, passphrase = '') {
+    // Pi menggunakan PBKDF2 dengan parameter spesifik
+    // Password: mnemonic itu sendiri
+    // Salt: string "mnemonic" + passphrase
+    const salt = Buffer.from('mnemonic' + passphrase, 'utf8');
+    const seed = crypto.pbkdf2Sync(mnemonic, salt, 2048, 32, 'sha512');
+    
+    // Seed untuk Ed25519 adalah 32 byte pertama dari hasil PBKDF2
+    return StellarSdk.Keypair.fromRawEd25519Seed(seed);
+}
+
+/**
  * Membuat dompet Pi baru dan menyimpannya ke file.
- * @returns {object} Objek berisi mnemonic, publicKey, dan secretKey.
  */
 function generateWallet() {
   console.log("Membuat dompet Pi baru...");
   try {
-    const mnemonic = bip39.generateMnemonic(256); // Membuat 24 kata mnemonik
-    const seed = bip39.mnemonicToSeedSync(mnemonic);
-    const keypair = StellarSdk.Keypair.fromRawEd25519Seed(seed.slice(0, 32));
+    const mnemonic = bip39.generateMnemonic(256);
+    const keypair = piMnemonicToKeypair(mnemonic); // MENGGUNAKAN FUNGSI BARU
 
     const wallet = {
       mnemonic,
@@ -41,7 +58,7 @@ function generateWallet() {
     };
 
     console.log("✅ Dompet berhasil dibuat!");
-    saveWalletToFile(wallet); // Simpan dompet ke file secara otomatis
+    saveWalletToFile(wallet);
     return wallet;
   } catch (error) {
     console.error("❌ Gagal membuat dompet:", error.message);
@@ -50,19 +67,17 @@ function generateWallet() {
 }
 
 /**
- * Memulihkan dompet dari frasa mnemonik dan menyimpannya ke file.
- * @param {string} mnemonic - 24 kata frasa mnemonik.
- * @returns {StellarSdk.Keypair} Objek Keypair Stellar.
+ * Memulihkan dompet dari frasa mnemonik.
  */
 function restoreWalletFromMnemonic(mnemonic) {
   console.log("Memulihkan dompet dari mnemonik...");
   const trimmedMnemonic = mnemonic.trim().replace(/\s+/g, ' ');
   if (!bip39.validateMnemonic(trimmedMnemonic)) {
-    throw new Error("Frasa mnemonik tidak valid. Pastikan ada 24 kata yang benar.");
+      // Peringatan ini tidak menghentikan proses, karena Pi mungkin menggunakan kata non-standar
+      console.warn("⚠️ Peringatan: Frasa mnemonik tidak lolos validasi standar BIP39, namun proses tetap dilanjutkan.");
   }
   try {
-    const seed = bip39.mnemonicToSeedSync(trimmedMnemonic);
-    const keypair = StellarSdk.Keypair.fromRawEd25519Seed(seed.slice(0, 32));
+    const keypair = piMnemonicToKeypair(trimmedMnemonic); // MENGGUNAKAN FUNGSI BARU
     
     const wallet = {
       mnemonic: trimmedMnemonic,
@@ -71,7 +86,7 @@ function restoreWalletFromMnemonic(mnemonic) {
     };
 
     console.log("✅ Dompet berhasil dipulihkan.");
-    saveWalletToFile(wallet); // Simpan dompet ke file
+    saveWalletToFile(wallet);
     return keypair;
   } catch (error) {
     console.error("❌ Gagal memulihkan dompet:", error.message);

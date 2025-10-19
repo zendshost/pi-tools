@@ -32,31 +32,34 @@ Skrip *command-line* (CLI) sederhana untuk berinteraksi dengan Pi Network. Skrip
 ### Prasyarat
 
 -   Pastikan Anda telah menginstal [Node.js](https://nodejs.org/) (versi 14 atau lebih tinggi).
+-   Pastikan Anda telah menginstal [Git](https://git-scm.com/).
 
 ### Langkah-langkah
 
-1.  **Unduh atau Clone Kode**
-    Salin file `pi_bot.js` ke direktori di komputer Anda.
-
-2.  **Buka Terminal atau Command Prompt**
-    Navigasikan ke direktori tempat Anda menyimpan file `pi_bot.js`.
-
+1.  **Clone Repositori**
+    Buka terminal atau Command Prompt Anda dan jalankan perintah berikut untuk mengunduh kode dari GitHub:
     ```bash
-    cd /path/to/your/script
+    git clone https://github.com/zendshost/pi-tools.git
+    ```
+
+2.  **Masuk ke Direktori Proyek**
+    Setelah proses clone selesai, masuk ke dalam direktori proyek:
+    ```bash
+    cd pi-tools
     ```
 
 3.  **Instal Dependensi**
     Jalankan perintah berikut untuk menginstal semua library yang diperlukan:
-
     ```bash
     npm install stellar-sdk bip39 ed25519-hd-key
     ```
+    Setelah selesai, Anda siap untuk menggunakan skrip ini.
 
 ---
 
 ## 📖 Cara Penggunaan
 
-Semua perintah dijalankan melalui terminal dengan format dasar:
+Semua perintah dijalankan melalui terminal dari dalam direktori `pi-tools` dengan format dasar:
 
 ```bash
 node pi_bot.js <perintah> [argumen...]
@@ -67,13 +70,11 @@ node pi_bot.js <perintah> [argumen...]
 Perintah ini akan membuat dompet Pi Network baru dan menyimpannya dalam sebuah file `pi-wallet-....json`.
 
 **Perintah:**
-
 ```bash
 node pi_bot.js generate
 ```
 
 **Contoh Output:**
-
 ```
 --- Pi Network Bot ---
 Membuat dompet Pi baru...
@@ -91,13 +92,11 @@ Secret Key (JANGAN DIBAGIKAN!): S...............................................
 Gunakan 24 kata frasa mnemonik Anda untuk memulihkan akses ke dompet yang sudah ada.
 
 **Perintah:**
-
 ```bash
 node pi_bot.js restore <24_kata_frasa_mnemonik>
 ```
 
 **Contoh:**
-
 ```bash
 node pi_bot.js restore word1 word2 word3 ... word24
 ```
@@ -107,13 +106,11 @@ node pi_bot.js restore word1 word2 word3 ... word24
 Melihat saldo Pi dari alamat dompet (Public Key) mana pun.
 
 **Perintah:**
-
 ```bash
 node pi_bot.js balance <public_key>
 ```
 
 **Contoh:**
-
 ```bash
 node pi_bot.js balance GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF
 ```
@@ -123,19 +120,16 @@ node pi_bot.js balance GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF
 Menampilkan daftar transaksi terakhir dari sebuah alamat dompet. Secara default, akan menampilkan 10 transaksi terakhir.
 
 **Perintah:**
-
 ```bash
 node pi_bot.js history <public_key> [limit]
 ```
 
 **Contoh (10 transaksi terakhir):**
-
 ```bash
 node pi_bot.js history GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF
 ```
 
 **Contoh (5 transaksi terakhir):**
-
 ```bash
 node pi_bot.js history GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF 5
 ```
@@ -145,19 +139,16 @@ node pi_bot.js history GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF 
 Mengirim sejumlah Pi dari dompet Anda ke alamat lain. Anda memerlukan Kunci Rahasia (`Secret Key`) dari dompet pengirim.
 
 **Perintah:**
-
 ```bash
 node pi_bot.js send <secret_key_anda> <alamat_tujuan> <jumlah> [memo_opsional]
 ```
 
 **Contoh (tanpa memo):**
-
 ```bash
 node pi_bot.js send S................... G................... 1.5
 ```
 
 **Contoh (dengan memo):**
-
 ```bash
 node pi_bot.js send S................... G................... 10 "Pembayaran untuk barang"
 ```
@@ -167,14 +158,13 @@ node pi_bot.js send S................... G................... 10 "Pembayaran unt
 Mengirim Pi ke banyak alamat sekaligus. Anda perlu membuat file JSON yang berisi daftar alamat tujuan dan jumlahnya.
 
 **Perintah:**
-
 ```bash
 node pi_bot.js batchSend <secret_key_anda> <path_ke_file.json> [memo_opsional]
 ```
 
 **Langkah-langkah:**
 
-1.  Buat sebuah file, misalnya `penerima.json`.
+1.  Buat sebuah file, misalnya `penerima.json`, di dalam direktori `pi-tools`.
 2.  Isi file tersebut dengan format berikut:
 
     ```json
@@ -197,7 +187,6 @@ node pi_bot.js batchSend <secret_key_anda> <path_ke_file.json> [memo_opsional]
 3.  Jalankan perintah di terminal.
 
 **Contoh:**
-
 ```bash
 node pi_bot.js batchSend S................... penerima.json "Gaji bulanan"
 ```

@@ -4,12 +4,14 @@ const StellarSdk = require('stellar-sdk');
 const bip39 = require('bip39');
 const edHd = require('ed25519-hd-key');
 const fs = require('fs');
-const path = require('path');
 
 // --- Konfigurasi Jaringan Pi ---
 const PI_NETWORK_PASSPHRASE = "Pi Network";
 const PI_HORIZON_URL = "https://api.mainnet.minepi.com";
 const server = new StellarSdk.Server(PI_HORIZON_URL, { allowHttp: true });
+
+// [PERBAIKAN FINAL] Menaikkan biaya ke 0.01 Pi
+const CUSTOM_FEE = '100000'; // Setara dengan 0.01 Pi
 
 /**
  * ==========================================================
@@ -25,16 +27,12 @@ const server = new StellarSdk.Server(PI_HORIZON_URL, { allowHttp: true });
 // --- FUNGSI-FUNGSI INTI ---
 
 /**
- * **FUNGSI BARU (SESUAI PERMINTAAN)**
  * Mengubah frasa mnemonik menjadi Keypair menggunakan metode derivasi HD (BIP-44).
- * Ini adalah metode yang berbeda dari yang digunakan oleh aplikasi Pi Wallet resmi
- * (yang menggunakan PBKDF2), tetapi sesuai dengan permintaan Anda.
  * @param {string} mnemonic - 24 kata frasa mnemonik.
  * @returns {StellarSdk.Keypair} Objek Keypair Stellar.
  */
 function mnemonicToStellarKeypair(mnemonic) {
   const seed = bip39.mnemonicToSeedSync(mnemonic);
-  // Menggunakan path derivasi 'm/44'/314159'/0' sesuai permintaan
   const { key } = edHd.derivePath("m/44'/314159'/0'", seed);
   return StellarSdk.Keypair.fromRawEd25519Seed(key);
 }
@@ -46,7 +44,6 @@ function generateWallet() {
   console.log("Membuat dompet Pi baru...");
   try {
     const mnemonic = bip39.generateMnemonic(256);
-    // MENGGUNAKAN FUNGSI BARU
     const keypair = mnemonicToStellarKeypair(mnemonic);
 
     const wallet = {
@@ -71,11 +68,9 @@ function restoreWalletFromMnemonic(mnemonic) {
   console.log("Memulihkan dompet dari mnemonik...");
   const trimmedMnemonic = mnemonic.trim().replace(/\s+/g, ' ');
   if (!bip39.validateMnemonic(trimmedMnemonic)) {
-      // Peringatan ini tidak menghentikan proses, karena Pi mungkin menggunakan kata non-standar
       console.warn("⚠️ Peringatan: Frasa mnemonik tidak lolos validasi standar BIP39, namun proses tetap dilanjutkan.");
   }
   try {
-    // MENGGUNAKAN FUNGSI BARU
     const keypair = mnemonicToStellarKeypair(trimmedMnemonic); 
     
     const wallet = {
@@ -165,7 +160,7 @@ async function sendPayment(secretKey, destination, amount, memo) {
     const account = await server.loadAccount(sourceKeypair.publicKey());
 
     const transaction = new StellarSdk.TransactionBuilder(account, {
-        fee: StellarSdk.BASE_FEE,
+        fee: CUSTOM_FEE, // Menggunakan biaya kustom 0.01 Pi
         networkPassphrase: PI_NETWORK_PASSPHRASE,
       })
       .addOperation(StellarSdk.Operation.payment({
@@ -184,13 +179,21 @@ async function sendPayment(secretKey, destination, amount, memo) {
 
     console.log("Submitting transaksi ke jaringan Pi...");
     const result = await server.submitTransaction(builtTransaction);
-    console.log("✅ Transaksi berhasil dikirim!");
-    console.log("   Hash Transaksi:", result.hash);
-    console.log("   Lihat di block explorer:", `https://blockexplorer.minepi.com/tx/${result.hash}`);
+    
+    if (result && result.hash) {
+      console.log("✅ Transaksi berhasil dikirim!");
+      console.log("   Hash Transaksi:", result.hash);
+      console.log("   Lihat di block explorer:", `https://blockexplorer.minepi.com/tx/${result.hash}`);
+    } else {
+      console.warn("⚠️ Transaksi kemungkinan berhasil, tetapi hash tidak diterima dari server.");
+      console.log("   Silakan periksa riwayat transaksi Anda di block explorer untuk konfirmasi.");
+      console.log("   Respons mentah dari server:", JSON.stringify(result, null, 2));
+    }
+
     return result;
   } catch (error) {
-    const errorDetails = error.response ? error.response.data.extras.result_codes : error.message;
-    console.error("❌ Pengiriman gagal:", errorDetails);
+    const errorDetails = error.response ? error.response.data : error.message;
+    console.error("❌ Pengiriman gagal:", JSON.stringify(errorDetails, null, 2));
     throw error;
   }
 }
@@ -212,7 +215,7 @@ async function batchSendPayment(secretKey, transfers, memo) {
     const account = await server.loadAccount(sourceKeypair.publicKey());
 
     const transactionBuilder = new StellarSdk.TransactionBuilder(account, {
-        fee: (parseInt(StellarSdk.BASE_FEE, 10) * transfers.length).toString(),
+        fee: (parseInt(CUSTOM_FEE, 10) * transfers.length).toString(), // Biaya total
         networkPassphrase: PI_NETWORK_PASSPHRASE,
     });
 
@@ -234,23 +237,26 @@ async function batchSendPayment(secretKey, transfers, memo) {
     console.log("Submitting transaksi massal ke jaringan Pi...");
     const result = await server.submitTransaction(transaction);
 
-    console.log("✅ Transaksi massal berhasil dikirim!");
-    console.log("   Hash Transaksi:", result.hash);
-    console.log("   Lihat di block explorer:", `https://blockexplorer.minepi.com/tx/${result.hash}`);
+    if (result && result.hash) {
+      console.log("✅ Transaksi massal berhasil dikirim!");
+      console.log("   Hash Transaksi:", result.hash);
+      console.log("   Lihat di block explorer:", `https://blockexplorer.minepi.com/tx/${result.hash}`);
+    } else {
+      console.warn("⚠️ Transaksi massal kemungkinan berhasil, tetapi hash tidak diterima dari server.");
+      console.log("   Silakan periksa riwayat transaksi Anda di block explorer untuk konfirmasi.");
+      console.log("   Respons mentah dari server:", JSON.stringify(result, null, 2));
+    }
+
     return result;
   } catch (error) {
-    const errorDetails = error.response ? error.response.data.extras.result_codes : error.message;
-    console.error("❌ Transfer massal gagal:", errorDetails);
+    const errorDetails = error.response ? error.response.data : error.message;
+    console.error("❌ Transfer massal gagal:", JSON.stringify(errorDetails, null, 2));
     throw error;
   }
 }
 
 // --- FUNGSI-FUNGSI PEMBANTU ---
 
-/**
- * Menyimpan detail dompet ke dalam file JSON.
- * @param {object} walletData - Objek berisi mnemonic, publicKey, dan secretKey.
- */
 function saveWalletToFile(walletData) {
     const filename = `pi-wallet-${walletData.publicKey.slice(0, 8)}-${Date.now()}.json`;
     const dataToSave = {
@@ -258,21 +264,14 @@ function saveWalletToFile(walletData) {
         ...walletData,
         createdAt: new Date().toISOString()
     };
-
     fs.writeFileSync(filename, JSON.stringify(dataToSave, null, 2));
     console.log(`✅ Detail dompet tersimpan di file: ${filename}`);
 }
 
-
-/**
- * Fungsi utama untuk menjalankan bot dari command line.
- */
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
-
   console.log("\n--- Pi Network Bot ---");
-
   switch (command) {
     case 'generate':
       const wallet = generateWallet();
@@ -281,7 +280,6 @@ async function main() {
       console.log("Public Key (Alamat Dompet):", wallet.publicKey);
       console.log("Secret Key (JANGAN DIBAGIKAN!):", wallet.secretKey);
       break;
-
     case 'restore':
       const mnemonic = args.slice(1).join(' ');
       if (!mnemonic) {
@@ -297,7 +295,6 @@ async function main() {
         console.error(`❌ Error: ${e.message}`);
       }
       break;
-
     case 'balance':
       const publicKeyForBalance = args[1];
       if (!publicKeyForBalance) {
@@ -306,7 +303,6 @@ async function main() {
       }
       await checkBalance(publicKeyForBalance);
       break;
-
     case 'history':
         const publicKeyForHistory = args[1];
         const limit = args[2] ? parseInt(args[2], 10) : 10;
@@ -316,7 +312,6 @@ async function main() {
         }
         await getTransactionHistory(publicKeyForHistory, limit);
         break;
-
     case 'send':
       const [secretKey, destination, amount, ...memoParts] = args.slice(1);
       const memo = memoParts.join(' ');
@@ -326,7 +321,6 @@ async function main() {
       }
       await sendPayment(secretKey, destination, amount, memo);
       break;
-
     case 'batchSend':
         const [batchSecretKey, filePath, ...batchMemoParts] = args.slice(1);
         const batchMemo = batchMemoParts.join(' ');
@@ -345,31 +339,17 @@ async function main() {
             console.error(`❌ Gagal melakukan transfer massal: ${e.message}`);
         }
         break;
-
     default:
       console.log(`
 Perintah tidak dikenal. Gunakan salah satu dari perintah berikut:
-
   - generate
-    Membuat dompet Pi baru dan menyimpannya ke file JSON.
-
   - restore <24 kata mnemonik>
-    Memulihkan dompet dari frasa mnemonik dan menyimpannya ke file.
-
   - balance <public_key>
-    Memeriksa saldo akun.
-
   - history <public_key> [limit]
-    Melihat riwayat transaksi terakhir (default 10).
-
   - send <secret_key> <destination> <amount> [memo]
-    Mengirim Pi ke satu alamat.
-
   - batchSend <secret_key> <path_ke_file.json> [memo]
-    Mengirim Pi ke banyak alamat dari file JSON.
       `);
   }
 }
 
-// Menjalankan fungsi utama
 main().catch(() => {});

@@ -12,20 +12,7 @@ const server = new StellarSdk.Server(PI_HORIZON_URL, { allowHttp: true });
 
 // Menaikkan biaya ke 0.01 Pi
 const CUSTOM_FEE = '100000'; // Setara dengan 0.01 Pi
-
-/**
- * ==========================================================
- * PERINGATAN KEAMANAN (SECURITY WARNING)
- * ==========================================================
- * Skrip ini menangani kunci rahasia (secret key) dan frasa mnemonik.
- * Pastikan Anda menjalankan skrip ini di lingkungan yang aman.
- * JANGAN PERNAH membagikan secret key atau mnemonik Anda kepada siapapun.
- * ==========================================================
- */
-
-
 // --- FUNGSI-FUNGSI INTI ---
-
 /**
  * Mengubah frasa mnemonik menjadi Keypair menggunakan metode derivasi HD (BIP-44).
  * @param {string} mnemonic - 24 kata frasa mnemonik.

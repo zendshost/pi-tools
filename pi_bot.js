@@ -10,7 +10,7 @@ const PI_NETWORK_PASSPHRASE = "Pi Network";
 const PI_HORIZON_URL = "https://api.mainnet.minepi.com";
 const server = new StellarSdk.Server(PI_HORIZON_URL, { allowHttp: true });
 
-// [PERBAIKAN FINAL] Menaikkan biaya ke 0.01 Pi
+// Menaikkan biaya ke 0.01 Pi
 const CUSTOM_FEE = '100000'; // Setara dengan 0.01 Pi
 
 /**

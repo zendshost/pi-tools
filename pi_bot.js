@@ -2,9 +2,9 @@
 
 const StellarSdk = require('stellar-sdk');
 const bip39 = require('bip39');
+const edHd = require('ed25519-hd-key');
 const fs = require('fs');
 const path = require('path');
-const crypto = require('crypto'); // Menggunakan modul crypto bawaan Node.js
 
 // --- Konfigurasi Jaringan Pi ---
 const PI_NETWORK_PASSPHRASE = "Pi Network";
@@ -25,21 +25,18 @@ const server = new StellarSdk.Server(PI_HORIZON_URL, { allowHttp: true });
 // --- FUNGSI-FUNGSI INTI ---
 
 /**
- * **FUNGSI BARU & PENTING**
- * Mengubah frasa mnemonik menjadi Keypair menggunakan metode derivasi Pi Network.
+ * **FUNGSI BARU (SESUAI PERMINTAAN)**
+ * Mengubah frasa mnemonik menjadi Keypair menggunakan metode derivasi HD (BIP-44).
+ * Ini adalah metode yang berbeda dari yang digunakan oleh aplikasi Pi Wallet resmi
+ * (yang menggunakan PBKDF2), tetapi sesuai dengan permintaan Anda.
  * @param {string} mnemonic - 24 kata frasa mnemonik.
- * @param {string} passphrase - Passphrase tambahan (untuk Pi, biasanya kosong).
  * @returns {StellarSdk.Keypair} Objek Keypair Stellar.
  */
-function piMnemonicToKeypair(mnemonic, passphrase = '') {
-    // Pi menggunakan PBKDF2 dengan parameter spesifik
-    // Password: mnemonic itu sendiri
-    // Salt: string "mnemonic" + passphrase
-    const salt = Buffer.from('mnemonic' + passphrase, 'utf8');
-    const seed = crypto.pbkdf2Sync(mnemonic, salt, 2048, 32, 'sha512');
-    
-    // Seed untuk Ed25519 adalah 32 byte pertama dari hasil PBKDF2
-    return StellarSdk.Keypair.fromRawEd25519Seed(seed);
+function mnemonicToStellarKeypair(mnemonic) {
+  const seed = bip39.mnemonicToSeedSync(mnemonic);
+  // Menggunakan path derivasi 'm/44'/314159'/0' sesuai permintaan
+  const { key } = edHd.derivePath("m/44'/314159'/0'", seed);
+  return StellarSdk.Keypair.fromRawEd25519Seed(key);
 }
 
 /**
@@ -49,7 +46,8 @@ function generateWallet() {
   console.log("Membuat dompet Pi baru...");
   try {
     const mnemonic = bip39.generateMnemonic(256);
-    const keypair = piMnemonicToKeypair(mnemonic); // MENGGUNAKAN FUNGSI BARU
+    // MENGGUNAKAN FUNGSI BARU
+    const keypair = mnemonicToStellarKeypair(mnemonic);
 
     const wallet = {
       mnemonic,
@@ -77,7 +75,8 @@ function restoreWalletFromMnemonic(mnemonic) {
       console.warn("⚠️ Peringatan: Frasa mnemonik tidak lolos validasi standar BIP39, namun proses tetap dilanjutkan.");
   }
   try {
-    const keypair = piMnemonicToKeypair(trimmedMnemonic); // MENGGUNAKAN FUNGSI BARU
+    // MENGGUNAKAN FUNGSI BARU
+    const keypair = mnemonicToStellarKeypair(trimmedMnemonic); 
     
     const wallet = {
       mnemonic: trimmedMnemonic,

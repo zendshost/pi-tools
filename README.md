@@ -51,7 +51,7 @@ Skrip *command-line* (CLI) sederhana untuk berinteraksi dengan Pi Network. Skrip
 3.  **Instal Dependensi**
     Jalankan perintah berikut untuk menginstal semua library yang diperlukan:
     ```bash
-    npm install stellar-sdk bip39 ed25519-hd-key
+    npm install
     ```
     Setelah selesai, Anda siap untuk menggunakan skrip ini.
 

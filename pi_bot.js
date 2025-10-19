@@ -8,7 +8,8 @@ const path = require('path');
 // --- Konfigurasi Jaringan Pi ---
 const PI_NETWORK_PASSPHRASE = "Pi Network";
 const PI_HORIZON_URL = "https://api.mainnet.minepi.com";
-const server = new StellarSdk.Horizon.Server(PI_HORIZON_URL);
+// PERBAIKAN: Menggunakan constructor Server yang baru
+const server = new StellarSdk.Server(PI_HORIZON_URL, { allowHttp: true });
 
 /**
  * ==========================================================
@@ -29,7 +30,7 @@ const server = new StellarSdk.Horizon.Server(PI_HORIZON_URL);
 function generateWallet() {
   console.log("Membuat dompet Pi baru...");
   try {
-    const mnemonic = bip39.generateMnemonic(256);
+    const mnemonic = bip39.generateMnemonic(256); // Membuat 24 kata mnemonik
     const seed = bip39.mnemonicToSeedSync(mnemonic);
     const keypair = StellarSdk.Keypair.fromRawEd25519Seed(seed.slice(0, 32));
 
